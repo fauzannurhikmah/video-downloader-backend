@@ -3,6 +3,8 @@ import yt_dlp
 import logging
 from pathlib import Path
 
+from app.utils.format import format_size
+
 logger = logging.getLogger(__name__)
 
 DOWNLOAD_DIR = Path("downloads")
@@ -42,10 +44,13 @@ async def download(url: str, download_type: str = "video"):
                     raise Exception("Downloaded file not found")
 
                 file_path = sorted(files, key=lambda x: x.suffix != '.mp4')[0]
+                actual_size = file_path.stat().st_size
 
                 return {
                     'title': info.get('title', 'TikTok Video'),
+                    'type': download_type,
                     'thumbnail': info.get('thumbnail'),
+                    'filesize': format_size(actual_size),
                     'duration': f"{info.get('duration', 0)}s",
                     'download_url': f"/api/download/{video_id}", 
                 }

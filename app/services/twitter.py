@@ -3,6 +3,8 @@ import yt_dlp
 from pathlib import Path
 import logging
 
+from app.utils.format import format_size
+
 logger = logging.getLogger(__name__)
 
 DOWNLOAD_DIR = Path("downloads")
@@ -81,6 +83,7 @@ async def download(url: str, download_type: str = "video"):
 
                 # PRIORITAS MP4
                 file_path = sorted(files, key=lambda x: x.suffix != '.mp4')[0]
+                actual_size = file_path.stat().st_size
 
                 # thumbnail fallback
                 thumbnail = info.get('thumbnail')
@@ -90,6 +93,8 @@ async def download(url: str, download_type: str = "video"):
 
                 return {
                     'title': info.get('title', 'Twitter Video'),
+                    'type': download_type,
+                    'filesize': format_size(actual_size),
                     'thumbnail': thumbnail,
                     'duration': f"{info.get('duration', 0) // 60}m",
                     'download_url': f"/api/download/{video_id}",

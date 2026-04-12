@@ -4,6 +4,7 @@ import logging
 import base64
 from pathlib import Path
 from app.utils.config import BASE_URL
+from app.utils.format import format_size
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,7 @@ async def download(url: str, download_type: str = "video"):
 
                 # PRIORITAS MP4
                 file_path = sorted(files, key=lambda x: x.suffix != '.mp4')[0]
+                actual_size = file_path.stat().st_size
 
                 # THUMBNAIL 
                 thumbnail = info.get('thumbnail')
@@ -107,6 +109,8 @@ async def download(url: str, download_type: str = "video"):
                 encoded_thumb = base64.urlsafe_b64encode(thumbnail.encode()).decode()
                 return {
                     'title': info.get('title', 'Instagram Media'),
+                    'type': download_type,
+                    'filesize': format_size(actual_size),
                     'thumbnail': f"{BASE_URL}/api/thumbnail/{encoded_thumb}",
                     'duration': f"{info.get('duration', 0)}s",
                     'download_url': f"/api/download/{video_id}",
