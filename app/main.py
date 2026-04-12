@@ -15,6 +15,9 @@ from app.api.routes import router
 DOWNLOAD_DIR = Path("downloads")
 DOWNLOAD_DIR.mkdir(exist_ok=True)
 
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", 8000))
+RELOAD = os.getenv("RELOAD", "false").lower() == "true"
 
 # CLEANUP WORKER
 def cleanup_old_files():
@@ -91,4 +94,17 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+    if RELOAD:
+        uvicorn.run(
+            "app.main:app",
+            host=HOST,
+            port=PORT,
+            reload=True
+        )
+    else:
+        uvicorn.run(
+            app,
+            host=HOST,
+            port=PORT
+        )

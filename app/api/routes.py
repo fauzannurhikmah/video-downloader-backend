@@ -6,6 +6,10 @@ from pathlib import Path
 from starlette.responses import FileResponse
 import mimetypes
 import time
+from fastapi.responses import StreamingResponse
+import httpx
+import base64
+
 
 from app.services import youtube, tiktok, instagram, facebook, twitter
 from app.utils.validators import is_valid_url
@@ -133,3 +137,21 @@ def delete_file(path: Path):
             time.sleep(2)
 
     logger.error(f"Failed to delete file after retries: {path}")
+
+
+# PROXY THUMBNAIL INSTAGRAM
+@router.get("/thumbnail/{encoded_url}")
+async def proxy_thumbnail(encoded_url: str):
+    try:
+        real_url = base64.urlsafe_b64decode(encoded_url.encode()).decode()
+
+        async with httpx.AsyncClient() as client:
+            res = await client.get(real_url)
+
+            return StreamingResponse(
+                res.aiter_bytes(),
+                media_type=res.headers.get("content-type", "image/jpeg")
+            )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
