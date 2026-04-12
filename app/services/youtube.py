@@ -121,7 +121,7 @@ async def download(url: str, download_type: str = "video"):
                     'title': info.get('title', 'Unknown'),
                     'thumbnail': info.get('thumbnail'),
                     'duration': f"{info.get('duration', 0) // 60}m",
-                    'download_url': f"/api/download/{file_path.name}",
+                    'download_url': f"/api/download/{video_id}",
                 }
 
         except Exception as e:

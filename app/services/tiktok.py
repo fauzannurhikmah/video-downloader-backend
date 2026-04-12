@@ -1,26 +1,57 @@
 import asyncio
 import yt_dlp
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+DOWNLOAD_DIR = Path("downloads")
+DOWNLOAD_DIR.mkdir(exist_ok=True)
+
+
 async def download(url: str, download_type: str = "video"):
-    """Download from TikTok"""
     def _download():
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'format': 'best' if download_type == 'video' else 'bestaudio',
-            'outtmpl': 'downloads/%(id)s',
-        }
-        
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            return {
-                'title': info.get('title', 'TikTok Video'),
-                'thumbnail': info.get('thumbnail'),
-                'duration': f"{info.get('duration', 0) // 60}s",
-                'download_url': f"/downloads/{info['id']}.mp4",
+        try:
+            ydl_opts = {
+                'outtmpl': str(DOWNLOAD_DIR / '%(title).70s_%(id)s.%(ext)s'),
+                'format': 'bestvideo+bestaudio/best',
+                'merge_output_format': 'mp4',
+                'quiet': True,
+                'no_warnings': True,
+                'restrictfilenames': True,
             }
-    
+
+            if download_type == "audio":
+                ydl_opts['format'] = 'bestaudio/best'
+                ydl_opts['postprocessors'] = [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                }]
+
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+
+                video_id = info.get('id')
+
+                files = [
+                    f for f in DOWNLOAD_DIR.iterdir()
+                    if video_id in f.name and f.suffix in ['.mp4', '.mp3', '.webm', '.m4a']
+                ]
+
+                if not files:
+                    raise Exception("Downloaded file not found")
+
+                file_path = sorted(files, key=lambda x: x.suffix != '.mp4')[0]
+
+                return {
+                    'title': info.get('title', 'TikTok Video'),
+                    'thumbnail': info.get('thumbnail'),
+                    'duration': f"{info.get('duration', 0)}s",
+                    'download_url': f"/api/download/{video_id}", 
+                }
+
+        except Exception as e:
+            logger.error(f"TikTok error: {e}")
+            raise
+
     return await asyncio.to_thread(_download)

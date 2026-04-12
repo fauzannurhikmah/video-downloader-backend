@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 from starlette.responses import FileResponse
 import mimetypes
+import time
 
 from app.services import youtube, tiktok, instagram, facebook, twitter
 from app.utils.validators import is_valid_url
@@ -78,38 +79,57 @@ async def get_video_info(url: str):
         return {"success": False, "error": str(e)}
 
 
-@router.get("/download/{filename}")
-async def download_file(filename: str, background_tasks: BackgroundTasks):
-    """Serve downloaded file"""
+@router.get("/download/{video_id}")
+async def download_file(video_id: str, background_tasks: BackgroundTasks):
     try:
-        # Security
-        if ".." in filename or "/" in filename or "\\" in filename:
-            raise HTTPException(status_code=400, detail="Invalid filename")
-        
-        file_path = DOWNLOAD_DIR / filename
-        
-        if not file_path.exists():
+        files = [
+            f for f in DOWNLOAD_DIR.iterdir()
+            if video_id in f.name
+        ]
+
+        if not files:
             raise HTTPException(status_code=404, detail="File not found")
-        
-        # Valid extension
+
+        file_path = sorted(files, key=lambda x: x.suffix != '.mp4')[0]
+
         valid_extensions = {'.mp4', '.mp3', '.webm', '.mkv', '.m4a', '.aac'}
         if file_path.suffix.lower() not in valid_extensions:
             raise HTTPException(status_code=400, detail="Invalid file type")
-        
-        # AUTO DETECT MIME TYPE
+
         mime_type, _ = mimetypes.guess_type(file_path)
-        
+
         response = FileResponse(
             path=file_path,
             media_type=mime_type or 'application/octet-stream',
             filename=file_path.name
         )
+
         response.headers["Content-Disposition"] = f'attachment; filename="{file_path.name}"'
-        
+
+        # AUTO DELETE FILE AFTER DOWNLOAD
+        background_tasks.add_task(delete_file, file_path)
+
         return response
-    
-    except HTTPException:
-        raise
+
     except Exception as e:
         logger.error(f"Download file error: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to serve file")
+
+
+def delete_file(path: Path):
+    import time
+
+    for i in range(6):
+        try:
+            with open(path, "rb"):
+                pass
+
+            path.unlink()
+            logger.info(f"Deleted file: {path}")
+            return
+
+        except Exception as e:
+            logger.warning(f"Retry delete ({i+1}): {e}")
+            time.sleep(2)
+
+    logger.error(f"Failed to delete file after retries: {path}")
