@@ -1,0 +1,28 @@
+# Python
+app/__pycache__/
+*.pyc
+
+# Env
+.env
+
+# Downloads (IMPORTANT)
+downloads/
+
+# Atau kalau mau lebih spesifik:
+# downloads/*.mp4
+# downloads/*.mp3
+# downloads/*.webm
+# downloads/*.m4a
+# downloads/*.mkv
+
+# Temp files yt-dlp
+*.part
+*.ytdl
+*.temp
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
