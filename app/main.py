@@ -75,8 +75,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:8000",
-        "https://*.vercel.app",
-        os.getenv("FRONTEND_URL", "*")
+        "https://video-downloader-vert-five.vercel.app/",
+        os.getenv("FRONTEND_URL", os.getenv("FRONTEND_URL"))
     ],
     allow_credentials=True,
     allow_methods=["*"],
