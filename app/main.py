@@ -73,12 +73,16 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://video-downloader-vert-five.vercel.app"
+        # "http://localhost:3000",
+        # "http://localhost:8000",
+        "https://video-downloader-vert-five.vercel.app",
+        # os.getenv("FRONTEND_URL", os.getenv("FRONTEND_URL"))
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 app.include_router(router, prefix="/api")
 
