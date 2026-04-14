@@ -95,7 +95,6 @@ async def download(url: str, download_type: str = "video"):
                     raise Exception("Failed to extract video information")
 
                 video_id = info.get('id')
-                filesize = info.get('filesize') or info.get('filesize_approx')
 
                 possible_files = [
                     f for f in DOWNLOAD_DIR.glob(f"*{video_id}*")
@@ -111,6 +110,7 @@ async def download(url: str, download_type: str = "video"):
                 )
 
                 file_path = possible_files[0]
+                actual_size = file_path.stat().st_size
 
                 logger.info(f"Final file selected: {file_path}")
 
@@ -122,7 +122,7 @@ async def download(url: str, download_type: str = "video"):
                 return {
                     'title': info.get('title', 'Unknown'),
                     'type': download_type,
-                    'filesize': format_size(filesize),
+                    'filesize': format_size(actual_size),
                     'thumbnail': info.get('thumbnail'),
                     'duration': f"{info.get('duration', 0) // 60}m",
                     'download_url': f"/api/download/{video_id}",
