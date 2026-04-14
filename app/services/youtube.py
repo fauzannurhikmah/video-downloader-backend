@@ -1,4 +1,5 @@
 import asyncio
+from fastapi import HTTPException
 import yt_dlp
 from pathlib import Path
 import logging
@@ -9,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 DOWNLOAD_DIR = Path("downloads")
 DOWNLOAD_DIR.mkdir(exist_ok=True)
+COOKIES_PATH = Path("cookies/youtube.txt")
 
 # GET VIDEO INFO
 async def get_info(url: str):
@@ -47,6 +49,11 @@ async def get_info(url: str):
 
 # DOWNLOAD VIDEO / AUDIO
 async def download(url: str, download_type: str = "video"):
+
+    if not COOKIES_PATH.exists():
+        logger.error("YouTube cookies have not been uploaded yet")
+        raise Exception(f"Failed to load YouTube cookies")
+
     def _download():
         try:
             logger.info(f"Downloading: {url}")
@@ -54,6 +61,8 @@ async def download(url: str, download_type: str = "video"):
             ydl_opts = {
                 'quiet': False,
                 'no_warnings': False,
+
+                'cookiefile': str(COOKIES_PATH),
 
                 'outtmpl': str(DOWNLOAD_DIR / '%(title).70s_%(id)s.%(ext)s'),
                 'restrictfilenames': True,
