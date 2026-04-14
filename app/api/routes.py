@@ -29,7 +29,7 @@ class DownloadResponse(BaseModel):
     data: dict = None
     error: str = None
 
-@app.get("/")
+@router.get("/")
 def root():
     return {"message": "API is running 🚀"}
 
