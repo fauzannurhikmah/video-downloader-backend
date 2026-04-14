@@ -29,6 +29,10 @@ class DownloadResponse(BaseModel):
     data: dict = None
     error: str = None
 
+@app.get("/")
+def root():
+    return {"message": "API is running 🚀"}
+
 @router.post("/download", response_model=DownloadResponse)
 async def download_video(request: DownloadRequest):
     """Download video from supported platforms"""
