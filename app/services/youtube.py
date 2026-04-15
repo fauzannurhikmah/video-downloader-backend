@@ -4,7 +4,7 @@ import yt_dlp
 from pathlib import Path
 import logging
 import os
-from app.utils.format import format_size
+from app.utils.format import format_size, format_smart_duration
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ async def download(url: str, download_type: str = "video"):
                     'type': download_type,
                     'filesize': format_size(actual_size),
                     'thumbnail': info.get('thumbnail'),
-                    'duration': f"{info.get('duration', 0) // 60}m",
+                    'duration': format_smart_duration(info.get('duration', 0)),
                     'download_url': f"/api/download/{video_id}",
                 }
 

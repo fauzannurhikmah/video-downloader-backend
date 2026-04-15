@@ -3,24 +3,35 @@ import yt_dlp
 import logging
 from pathlib import Path
 
-from app.utils.format import format_size
+from app.utils.format import format_size, format_smart_duration
 
 logger = logging.getLogger(__name__)
 
 DOWNLOAD_DIR = Path("downloads")
 DOWNLOAD_DIR.mkdir(exist_ok=True)
+COOKIES_PATH = Path("cookies/tiktok.txt")
 
 
 async def download(url: str, download_type: str = "video"):
+    if not COOKIES_PATH.exists():
+        logger.error("Tiktok cookies have not been uploaded yet")
+        raise Exception(f"Failed to load Tiktok cookies")
+
     def _download():
         try:
             ydl_opts = {
+                'cookiefile': str(COOKIES_PATH),
                 'outtmpl': str(DOWNLOAD_DIR / '%(title).70s_%(id)s.%(ext)s'),
                 'format': 'bestvideo+bestaudio/best',
                 'merge_output_format': 'mp4',
                 'quiet': True,
                 'no_warnings': True,
                 'restrictfilenames': True,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                },
+
             }
 
             if download_type == "audio":
@@ -51,7 +62,7 @@ async def download(url: str, download_type: str = "video"):
                     'type': download_type,
                     'thumbnail': info.get('thumbnail'),
                     'filesize': format_size(actual_size),
-                    'duration': f"{info.get('duration', 0)}s",
+                    'duration': format_smart_duration(info.get('duration', 0)),
                     'download_url': f"/api/download/{video_id}", 
                 }
 

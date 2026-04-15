@@ -4,12 +4,13 @@ import logging
 import base64
 from pathlib import Path
 from app.utils.config import BASE_URL
-from app.utils.format import format_size
+from app.utils.format import format_size, format_smart_duration
 
 logger = logging.getLogger(__name__)
 
 DOWNLOAD_DIR = Path("downloads")
 DOWNLOAD_DIR.mkdir(exist_ok=True)
+COOKIES_PATH = Path("cookies/instagram.txt")
 
 # GET INFO
 async def get_info(url: str):
@@ -52,15 +53,25 @@ async def get_info(url: str):
 
 # DOWNLOAD
 async def download(url: str, download_type: str = "video"):
+
+    if not COOKIES_PATH.exists():
+        logger.error("Instagram cookies have not been uploaded yet")
+        raise Exception(f"Failed to load Instagram cookies")
+
     def _download():
         try:
             ydl_opts = {
                 'outtmpl': str(DOWNLOAD_DIR / '%(title).70s_%(id)s.%(ext)s'),
                 'format': 'bestvideo+bestaudio/best',
+                'cookiefile': str(COOKIES_PATH),
                 'merge_output_format': 'mp4',
                 'quiet': True,
                 'no_warnings': True,
                 'restrictfilenames': True,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                },
             }
 
             # AUDIO MODE
@@ -112,7 +123,7 @@ async def download(url: str, download_type: str = "video"):
                     'type': download_type,
                     'filesize': format_size(actual_size),
                     'thumbnail': f"{BASE_URL}/api/thumbnail/{encoded_thumb}",
-                    'duration': f"{info.get('duration', 0)}s",
+                    'duration': format_smart_duration(info.get('duration', 0)),
                     'download_url': f"/api/download/{video_id}",
                 }
 
