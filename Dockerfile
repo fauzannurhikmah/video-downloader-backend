@@ -2,7 +2,11 @@
 FROM python:3.11-slim
 
 # Install ffmpeg (buat yt-dlp)
-RUN apt-get update && apt-get install -y ffmpeg && apt-get clean
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
