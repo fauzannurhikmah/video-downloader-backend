@@ -79,7 +79,7 @@ async def download(url: str, download_type: str = "video"):
                 final_tags = []
 
                 for t in all_sources:
-                    tag = t.strip('.,! ').lower()
+                    tag = t.replace('#', '').strip('.,! ').lower()
                     if tag and tag not in seen:
                         seen.add(tag)
                         final_tags.append(tag)
