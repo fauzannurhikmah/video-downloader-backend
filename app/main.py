@@ -76,7 +76,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:8000",
         "https://video-downloader-vert-five.vercel.app",
-        os.getenv("FRONTEND_URL", os.getenv("FRONTEND_URL"))
+        os.getenv("FRONTEND_URL")
     ],
     allow_credentials=True,
     allow_methods=["*"],

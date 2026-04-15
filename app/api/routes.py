@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Form, Header
 from pydantic import BaseModel, HttpUrl
 from typing import Literal
 import logging
@@ -9,6 +9,8 @@ import time
 from fastapi.responses import StreamingResponse
 import httpx
 import base64
+import shutil
+import os
 
 
 from app.services import youtube, tiktok, instagram, facebook, twitter
@@ -19,6 +21,10 @@ logger = logging.getLogger(__name__)
 
 DOWNLOAD_DIR = Path("downloads")
 DOWNLOAD_DIR.mkdir(exist_ok=True)
+
+BASE_COOKIES_DIR = Path("cookies")
+BASE_COOKIES_DIR.mkdir(exist_ok=True)
+ADMIN_KEY = os.getenv("ADMIN_KEY")
 
 class DownloadRequest(BaseModel):
     url: str
@@ -159,3 +165,42 @@ async def proxy_thumbnail(encoded_url: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+ALLOWED_PLATFORMS = {
+    "youtube",
+    "tiktok",
+    "facebook",
+    "instagram",
+    "twitter",
+    "twitch",
+}
+
+# upload cookies to platforms
+@router.post("/upload-cookies")
+async def upload_cookies(
+    file: UploadFile = File(...),
+    platform: str = Form(...),
+    x_api_key: str = Header(None)
+):
+
+    # simple auth
+    if x_api_key != ADMIN_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # platform validation
+    if platform not in ALLOWED_PLATFORMS:
+        raise HTTPException(status_code=400, detail="Invalid platform")
+
+    # file validation
+    if not file.filename.endswith(".txt"):
+        raise HTTPException(status_code=400, detail="Only .txt allowed")
+
+    # path per platform
+    save_path = BASE_COOKIES_DIR / f"{platform}.txt"
+
+    # save file
+    with open(save_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    return {"detail": f"{platform} cookies saved"}
