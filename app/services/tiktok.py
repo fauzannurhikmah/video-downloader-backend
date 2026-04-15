@@ -1,4 +1,5 @@
 import asyncio
+import re
 import yt_dlp
 import logging
 from pathlib import Path
@@ -54,16 +55,47 @@ async def download(url: str, download_type: str = "video"):
                 if not files:
                     raise Exception("Downloaded file not found")
 
+                title = info.get('title', 'Unknown')
+                description = info.get('description', '') or ""
+
+                # TikTok: hashtags only form title (caption)
+                title_hashtags = re.findall(r'#([^\s#]+)', title)
+
+                # optional fallback
+                desc_hashtags = re.findall(r'#([^\s#]+)', description)
+
+                # combained all
+                all_sources = title_hashtags + desc_hashtags
+
+                # caption
+                lines = [line.strip() for line in title.split('\n') if line.strip()]
+                clean_lines = [l for l in lines if not l.startswith(('http'))]
+
+                short_caption = " ".join(clean_lines[:3])
+                if len(clean_lines) > 3:
+                    short_caption += "..."
+
+                seen = set()
+                final_tags = []
+
+                for t in all_sources:
+                    tag = t.strip('.,! ').lower()
+                    if tag and tag not in seen:
+                        seen.add(tag)
+                        final_tags.append(tag)
+
                 file_path = sorted(files, key=lambda x: x.suffix != '.mp4')[0]
                 actual_size = file_path.stat().st_size
 
                 return {
-                    'title': info.get('title', 'TikTok Video'),
+                    'title': title,
                     'type': download_type,
                     'thumbnail': info.get('thumbnail'),
                     'filesize': format_size(actual_size),
                     'duration': format_smart_duration(info.get('duration', 0)),
                     'download_url': f"/api/download/{video_id}", 
+                    'caption': short_caption if short_caption else "No description available.",
+                    'tags': final_tags
                 }
 
         except Exception as e:

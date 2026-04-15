@@ -1,4 +1,5 @@
 import asyncio
+import re
 import yt_dlp
 import logging
 import base64
@@ -90,6 +91,8 @@ async def download(url: str, download_type: str = "video"):
                     raise Exception("Failed to extract Instagram media")
 
                 video_id = info.get('id')
+                title = info.get('title', 'Instagram Media')
+                description = info.get('description', '') or ""
 
                 # FIND FILE
                 files = [
@@ -103,6 +106,26 @@ async def download(url: str, download_type: str = "video"):
                 # PRIORITAS MP4
                 file_path = sorted(files, key=lambda x: x.suffix != '.mp4')[0]
                 actual_size = file_path.stat().st_size
+
+                # TAGS: from caption (description)
+                hashtags = re.findall(r'#([^\s#]+)', description)
+
+                seen = set()
+                final_tags = []
+
+                for t in hashtags:
+                    tag = t.strip('.,! ').lower()
+                    if tag and tag not in seen:
+                        seen.add(tag)
+                        final_tags.append(tag)
+
+                # CAPTION: get clear tags & links
+                lines = [line.strip() for line in description.split('\n') if line.strip()]
+                clean_lines = [l for l in lines if not l.startswith(('#', 'http'))]
+
+                short_caption = " ".join(clean_lines[:3])
+                if len(clean_lines) > 3:
+                    short_caption += "..."
 
                 # THUMBNAIL 
                 thumbnail = info.get('thumbnail')
@@ -119,12 +142,14 @@ async def download(url: str, download_type: str = "video"):
 
                 encoded_thumb = base64.urlsafe_b64encode(thumbnail.encode()).decode()
                 return {
-                    'title': info.get('title', 'Instagram Media'),
+                    'title': title,
                     'type': download_type,
                     'filesize': format_size(actual_size),
                     'thumbnail': f"{BASE_URL}/api/thumbnail/{encoded_thumb}",
                     'duration': format_smart_duration(info.get('duration', 0)),
                     'download_url': f"/api/download/{video_id}",
+                    'caption': short_caption if short_caption else "No caption available.",
+                    'tags': final_tags
                 }
 
         except Exception as e:

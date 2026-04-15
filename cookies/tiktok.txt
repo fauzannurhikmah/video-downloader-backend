@@ -17,11 +17,11 @@
 .tiktok.com	TRUE	/	FALSE	1785875118	store-country-code-src	uid
 .tiktok.com	TRUE	/	FALSE	1785875118	tt-target-idc	alisg
 .tiktok.com	TRUE	/	FALSE	1785875114	tt-target-idc-sign	NWY5_apgoENKPCId_-LWbjNtvrMC0HrO7ZCXOLXqU2xHxPdXIGvAfhlA3RTJnCvajhH3xCeTNlj5JGvT5xb6IMnm0B-zQHs1RxW7qRjv9Ts4uvgbJEivEvG9X-pee-23Mcqp1jqfEWI6W-Fxk4Oog-duBwe_ooLpbt9gY06jQQZtWhv8v6S5QIIbGTqIuIuFSTJV9IuC6jG_Y2p0UiafVgDTOMxfpuXsvrEltGuO5pEBoJ429-LUWya3W-2BduRO5zOtYp4yT4Id7Gk7X9qwOQK5BiIx0b3TmhcuSktXZdxbwMHl-uDZCi5kQQ93lspOTpEhj1Yu0MpFakac70gGf0pvCATv_eOr5XGVtoPslvJC1_1t10CHJDCizSTeTQqyt7ywUUN7EITXNSfJY5zQEmDBve6C7h9RIyryPwR_NfRSXPnJYs1h4KydwTBpLNiNy9hUiMhHkg4C8yOhcleGgZSlJZ9BLAeKQAL8B1Mte8Oh1hpddnptp-U30cOViByQ
-.tiktok.com	TRUE	/	TRUE	1791827347	tt_chain_token	FlFwrtVcSmL9jQ+4tNTF6A==
+.tiktok.com	TRUE	/	TRUE	1791834777	tt_chain_token	FlFwrtVcSmL9jQ+4tNTF6A==
 .tiktok.com	TRUE	/	TRUE	0	tt_csrf_token	0uXWPHjV-cFBEsmHiM4hJV2pfCxXdMfnl9UU
 .tiktok.com	TRUE	/	FALSE	1785875118	store-country-sign	MEIEDL2lQbeYRpHhVfJtFQQgciN19XgLkZR6LM3Fn3g0lVJSJnvbKFsjL1jB-sjrkYMEEKRJdKomkOZbJ9-4rpEv2p8
 .tiktok.com	TRUE	/	FALSE	1791827194	odin_tt	f9fcefa34577f89fcdbc8fed9f69a76be5e9cce21a3161513e83b6a4d1f8957b6e18cb9862343136fbafbf581cd4cdc4b2644b2df7978795c97c2c639d4a8101b2cd179bb98375d7a19ed6e443d9db5f
-.tiktok.com	TRUE	/	TRUE	1777139346	msToken	rxghjlJwaUK1dMoPMzCqtjkmUBYxCIyWILKmvbkxJbE1PQ7t5s54EIiKeVafGjDVO6qbitYza5F_fiH1nQ_Q5PFpAI4qakdbdAyKyN1Ll_RiXbVG0VbQ8lx8lqT0DaLA5nEcabcZJxspynId2qgi_lo=
+.tiktok.com	TRUE	/	TRUE	1777146777	msToken	MQ2fj9xjXyntCOpzTuHwHvkJDuUkRo8VAZa4d-4tqi2J7V1Lo9F1HX1LPL7A5gqdtC8BWQ295C_GwQgBi-kz5KbefUl8oDW01iNhRVtsvrWzGG4WwGABTwfrKvnU94Wsdtmju8eHD-ZfsxWaRH27cuM=
 .www.tiktok.com	TRUE	/	TRUE	1782455927	delay_guest_mode_vid	8
 .www.tiktok.com	TRUE	/	TRUE	1791827184	tiktok_webapp_theme	dark
 .www.tiktok.com	TRUE	/	TRUE	1791827184	tiktok_webapp_theme_source	auto
@@ -30,6 +30,6 @@
 www.tiktok.com	FALSE	/	FALSE	1784136801	living_user_id	246930779593
 www.tiktok.com	FALSE	/	FALSE	1778099114	last_login_method	google
 www.tiktok.com	FALSE	/	FALSE	1785875088	g_state	{"i_l":0,"i_ll":1770323088263,"i_b":"qmXvb0yDDqtfbYD+DsyjeL7taQyIRuZO++3uc6hc41U","i_e":{"enable_itp_optimization":3}}
-www.tiktok.com	FALSE	/	FALSE	1776275484	_waftokenid	eyJ2Ijp7ImEiOiJ4MlVYTnVTL0ZjazU2OXdNTzdiK2VlNGxwNDMzYWxUd0J5MzZoOWFKSlVBPSIsImIiOjE3NzYyNzUxODMsImMiOiI1YVdTN2NJUHk5NjZtZjZiYTgvUGxtRmg1QW1mQUlPQW1FSFpGSmFaMjQ0PSJ9LCJzIjoiWEhmeFVENFNjSlRKYkVEV2svK0tjWXNPTFNLb3k0b0FZbDY0ZEd1UFYyOD0ifQ
 www.tiktok.com	FALSE	/	FALSE	1776361592	tt_ticket_guard_has_set_public_key	1
 www.tiktok.com	FALSE	/	FALSE	1784051306	msToken	E5nOAVjBgSDnWao6St70IBJz1pvhOkuafTa9sdCmCRbG8tIe2e_bHVa-kk36NEn5AjdyKLdOr0OqM94eo_FYKMmszsmuUcYyJ_ym7sa1cr3ZWEeSZJxHqZoC-YxmnImAJynTtqwJtHzPrqbmpanfrJE=
+www.tiktok.com	FALSE	/@rizalmane1/video	FALSE	1776283065	_waftokenid	eyJ2Ijp7ImEiOiJtQVYrbk1SbXlwS3JMaDlMaFBnY21Iam9laEp6RnROYkNhUVdDS1RtWXk4PSIsImIiOjE3NzYyODI3NjUsImMiOiI2WnFGL2MvaEcwd29SZi9tbXlubnZBOEtSZmsxUS9ua0ZVK2lGS3NuSmRFPSJ9LCJzIjoidUxLNzhSdjhGNWYrL3ZQRm5BUnI2V081ZHp3UUpPejBrTU1jYldaZGJ6az0ifQ

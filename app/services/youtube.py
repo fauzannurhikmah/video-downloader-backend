@@ -4,6 +4,7 @@ import yt_dlp
 from pathlib import Path
 import logging
 import os
+import re
 from app.utils.format import format_size, format_smart_duration
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,34 @@ async def download(url: str, download_type: str = "video"):
                     key=lambda x: x.suffix != '.mp4'
                 )
 
+                title = info.get('title', 'Unknown')
+                description = info.get('description', '') or ""
+                official_tags = info.get('tags') or []
+
+                # get all hashtags source
+                title_hashtags = re.findall(r'#([^\s#]+)', title)
+                desc_hashtags = re.findall(r'#([^\s#]+)', description)
+
+                # combained all
+                all_sources = title_hashtags + official_tags + desc_hashtags
+
+                seen = set()
+                final_tags = []
+
+                for t in all_sources:
+                    tag = t.strip('.,! ').lower()
+                    if tag and tag not in seen:
+                        seen.add(tag)
+                        final_tags.append(tag)
+
+                # caption
+                lines = [line.strip() for line in description.split('\n') if line.strip()]
+                clean_lines = [l for l in lines if not l.startswith(('#', 'http'))]
+                short_caption = " ".join(clean_lines[:3])
+                if len(clean_lines) > 3:
+                    short_caption += "..."
+
+                # file size
                 file_path = possible_files[0]
                 actual_size = file_path.stat().st_size
 
@@ -129,12 +158,14 @@ async def download(url: str, download_type: str = "video"):
                     raise Exception("Invalid file (HTML instead of video)")
 
                 return {
-                    'title': info.get('title', 'Unknown'),
+                    'title': title,
                     'type': download_type,
                     'filesize': format_size(actual_size),
                     'thumbnail': info.get('thumbnail'),
                     'duration': format_smart_duration(info.get('duration', 0)),
                     'download_url': f"/api/download/{video_id}",
+                    'caption': short_caption if short_caption else "No description available.",
+                    'tags': final_tags
                 }
 
         except Exception as e:
