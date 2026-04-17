@@ -55,24 +55,26 @@ async def get_available_qualities(url: str):
 
         ydl_opts = {
             'quiet': True,
+            'no_warnings': True,
             'cookiefile': str(COOKIES_PATH) if COOKIES_PATH.exists() else None,
-
+            
+            # Metadata Only
+            'extract_flat': False,
             'skip_download': True,
-            'allow_unplayable_formats': True,
-
+            
+            # Bypass Geo/IP Block via Client Diversity
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['web'],
+                    'player_client': ['android', 'web', 'tv'],
+                    'player_skip': ['webpage', 'configs'],
                 }
             },
 
             'http_headers': {
-                'User-Agent': 'Mozilla/5.0',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': '*/*',
                 'Accept-Language': 'en-US,en;q=0.9',
             },
-
-            'sleep_interval': 2,
-            'max_sleep_interval': 5,
         }
 
         print("\n========== DEBUG START ==========")
@@ -209,6 +211,7 @@ async def get_available_qualities(url: str):
         return result
 
     return await asyncio.to_thread(_get)
+    
 
 # DOWNLOAD VIDEO / AUDIO
 async def download(url: str, download_type: str = "video", quality: int | None = None):
