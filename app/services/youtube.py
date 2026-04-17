@@ -55,70 +55,131 @@ async def get_available_qualities(url: str):
             'quiet': True,
             'cookiefile': str(COOKIES_PATH) if COOKIES_PATH.exists() else None,
         }
- 
+
+        print("\n========== DEBUG START ==========")
+        print(f"URL: {url}")
+        print(f"Cookies exists: {COOKIES_PATH.exists()}")
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
+
+            print(f"INFO KEYS: {list(info.keys())}")
+
             formats = info.get("formats", [])
             duration = info.get("duration") or 0
-            
+
+            print(f"TOTAL FORMATS: {len(formats)}")
+            print(f"DURATION: {duration}")
+
+            # =========================
+            # SAMPLE FORMATS (biar gak spam)
+            # =========================
+            print("\n--- SAMPLE FORMATS ---")
+            for i, f in enumerate(formats[:10]):
+                print({
+                    "height": f.get("height"),
+                    "vcodec": f.get("vcodec"),
+                    "acodec": f.get("acodec"),
+                    "filesize": f.get("filesize"),
+                    "tbr": f.get("tbr"),
+                    "ext": f.get("ext"),
+                })
+
+            # =========================
+            # AUDIO
+            # =========================
+            audio_streams = [
+                f for f in formats
+                if f.get("vcodec") == "none" and f.get("acodec") != "none"
+            ]
+
+            print(f"\nAUDIO STREAMS COUNT: {len(audio_streams)}")
+
             best_audio = None
-            audio_streams = [f for f in formats if f.get("vcodec") == "none" and f.get("acodec") != "none"]
             if audio_streams:
                 best_audio = max(audio_streams, key=lambda x: x.get('tbr') or 0)
-            
+
             audio_size = 0
             if best_audio:
                 audio_size = best_audio.get('filesize') or best_audio.get('filesize_approx')
                 if not audio_size and best_audio.get('tbr'):
                     audio_size = (best_audio['tbr'] * 1000 / 8) * duration
 
+            print(f"BEST AUDIO SIZE: {audio_size}")
+
             result_map = {}
- 
+
+            skipped_no_height = 0
+            skipped_audio_only = 0
+            skipped_no_size = 0
+            success_count = 0
+
             for f in formats:
-                if f.get("vcodec") == "none" or not f.get("height"):
+                height = f.get("height")
+
+                if not height:
+                    skipped_no_height += 1
                     continue
- 
-                height = f["height"]
+
+                if f.get("vcodec") == "none":
+                    skipped_audio_only += 1
+                    continue
+
                 v_size = f.get("filesize") or f.get("filesize_approx")
-                
+
                 if not v_size and f.get("tbr"):
                     v_size = (f['tbr'] * 1000 / 8) * duration
-                
+
                 if not v_size:
+                    skipped_no_size += 1
                     continue
 
                 total_estimated_size = v_size + audio_size
- 
-                if height not in result_map:
-                    result_map[height] = []
- 
-                result_map[height].append(total_estimated_size)
- 
+
+                result_map.setdefault(height, []).append(total_estimated_size)
+                success_count += 1
+
+            print("\n--- FILTER STATS ---")
+            print(f"Skipped (no height): {skipped_no_height}")
+            print(f"Skipped (audio only): {skipped_audio_only}")
+            print(f"Skipped (no size): {skipped_no_size}")
+            print(f"Valid formats: {success_count}")
+
+            print(f"\nRESULT MAP KEYS: {list(result_map.keys())}")
+
+            if not result_map:
+                print("⚠️ RESULT MAP EMPTY ⚠️")
+                print("========== DEBUG END ==========\n")
+                return []
+
             qualities_keys = sorted(result_map.keys())
             qualities_keys = [q for q in qualities_keys if q <= 1080]
- 
+
             result = []
-            max_q = max(qualities_keys) if qualities_keys else 0
- 
+            max_q = max(qualities_keys)
+
             for q in qualities_keys:
                 sizes = sorted(result_map[q])
-                
-                chosen = sizes[-1] 
- 
+                chosen = sizes[-1]
+
                 label = f"{q}p"
-                if q == 360: label += " (fast)"
-                elif q == 720: label += " (recommended)"
-                elif q == max_q: label += " (best)"
- 
+                if q == 360:
+                    label += " (fast)"
+                elif q == 720:
+                    label += " (recommended)"
+                elif q == max_q:
+                    label += " (best)"
+
                 result.append({
                     "quality": q,
                     "label": label,
                     "filesize": f"~{format_size(chosen)}",
                     "bytes": int(chosen),
                 })
- 
+
+            print("========== DEBUG END ==========\n")
             return result
- 
+
     return await asyncio.to_thread(_get)
 
 # DOWNLOAD VIDEO / AUDIO
