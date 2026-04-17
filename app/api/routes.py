@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Form, Header
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Form, Header, Body
 from pydantic import BaseModel, HttpUrl
 from typing import Literal
 import logging
@@ -12,9 +12,11 @@ import base64
 import shutil
 import os
 
-
 from app.services import youtube, tiktok, instagram, facebook, twitter
+from app.services.analyze import analyze
 from app.utils.validators import is_valid_url
+from typing import Optional
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -29,6 +31,7 @@ ADMIN_KEY = os.getenv("ADMIN_KEY")
 class DownloadRequest(BaseModel):
     url: str
     type: Literal["video", "audio"] = "video"
+    quality: Optional[int] = None
 
 class DownloadResponse(BaseModel):
     success: bool
@@ -38,6 +41,29 @@ class DownloadResponse(BaseModel):
 @router.get("/")
 def root():
     return {"message": "API is running 🚀"}
+
+@router.post("/analyze")
+async def analyze_api(data: dict = Body(...)):
+    url = data.get("url")
+    download_type = data.get("type", "video")
+
+    if not url:
+        return {
+            "success": False,
+            "error": "URL is required"
+        }
+    try:
+        result = await analyze(url, download_type)
+        return {
+            "success": True,
+            "data": result
+        }
+    except Exception as e:
+        logger.error(f"Analyze API error: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 @router.post("/download", response_model=DownloadResponse)
 async def download_video(request: DownloadRequest):
@@ -51,13 +77,13 @@ async def download_video(request: DownloadRequest):
         
         # Detect platform
         if "youtube.com" in url or "youtu.be" in url:
-            result = await youtube.download(url, request.type)
+            result = await youtube.download(url, request.type, request.quality)
         elif "tiktok.com" in url or "vm.tiktok.com" in url:
             result = await tiktok.download(url, request.type)
         elif "instagram.com" in url or "instagr.am" in url:
             result = await instagram.download(url, request.type)
         elif "facebook.com" in url or "fb.watch" in url:
-            result = await facebook.download(url, request.type)  # ✅ Facebook
+            result = await facebook.download(url, request.type) 
         elif "twitter.com" in url or "x.com" in url or "t.co" in url:
             result = await twitter.download(url, request.type)
         else:

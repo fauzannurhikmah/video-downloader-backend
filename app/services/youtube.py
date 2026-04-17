@@ -48,16 +48,96 @@ async def get_info(url: str):
 
     return await asyncio.to_thread(_get_info)
 
-# DOWNLOAD VIDEO / AUDIO
-async def download(url: str, download_type: str = "video"):
+# GET QUALITIES
+async def get_available_qualities(url: str):
+    def _get():
+        ydl_opts = {
+            'quiet': True,
+            'cookiefile': str(COOKIES_PATH) if COOKIES_PATH.exists() else None,
+        }
+ 
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            formats = info.get("formats", [])
+            duration = info.get("duration") or 0
+            
+            best_audio = None
+            audio_streams = [f for f in formats if f.get("vcodec") == "none" and f.get("acodec") != "none"]
+            if audio_streams:
+                best_audio = max(audio_streams, key=lambda x: x.get('tbr') or 0)
+            
+            audio_size = 0
+            if best_audio:
+                audio_size = best_audio.get('filesize') or best_audio.get('filesize_approx')
+                if not audio_size and best_audio.get('tbr'):
+                    audio_size = (best_audio['tbr'] * 1000 / 8) * duration
 
+            result_map = {}
+ 
+            for f in formats:
+                if f.get("vcodec") == "none" or not f.get("height"):
+                    continue
+ 
+                height = f["height"]
+                v_size = f.get("filesize") or f.get("filesize_approx")
+                
+                if not v_size and f.get("tbr"):
+                    v_size = (f['tbr'] * 1000 / 8) * duration
+                
+                if not v_size:
+                    continue
+
+                total_estimated_size = v_size + audio_size
+ 
+                if height not in result_map:
+                    result_map[height] = []
+ 
+                result_map[height].append(total_estimated_size)
+ 
+            qualities_keys = sorted(result_map.keys())
+            qualities_keys = [q for q in qualities_keys if q <= 1080]
+ 
+            result = []
+            max_q = max(qualities_keys) if qualities_keys else 0
+ 
+            for q in qualities_keys:
+                sizes = sorted(result_map[q])
+                
+                chosen = sizes[-1] 
+ 
+                label = f"{q}p"
+                if q == 360: label += " (fast)"
+                elif q == 720: label += " (recommended)"
+                elif q == max_q: label += " (best)"
+ 
+                result.append({
+                    "quality": q,
+                    "label": label,
+                    "filesize": f"~{format_size(chosen)}",
+                    "bytes": int(chosen),
+                })
+ 
+            return result
+ 
+    return await asyncio.to_thread(_get)
+
+# DOWNLOAD VIDEO / AUDIO
+async def download(url: str, download_type: str = "video", quality: int | None = None):
     if not COOKIES_PATH.exists():
         logger.error("YouTube cookies have not been uploaded yet")
-        raise Exception(f"Failed to load YouTube cookies")
+        raise Exception("Failed to load YouTube cookies")
 
     def _download():
         try:
+            import uuid
+
             logger.info(f"Downloading: {url}")
+
+            unique_id = uuid.uuid4().hex
+            selected_format = 'bv*+ba/b'
+
+            if download_type == "video" and quality:
+                selected_format = f"best[height<={quality}]/bestvideo[height<={quality}]+bestaudio"
 
             ydl_opts = {
                 'quiet': False,
@@ -65,10 +145,10 @@ async def download(url: str, download_type: str = "video"):
 
                 'cookiefile': str(COOKIES_PATH),
 
-                'outtmpl': str(DOWNLOAD_DIR / '%(title).70s_%(id)s.%(ext)s'),
+                'outtmpl': str(DOWNLOAD_DIR / f'%(title).70s_{unique_id}_%(id)s.%(ext)s'),
                 'restrictfilenames': True,
 
-                'format': 'bv*+ba/b',
+                'format': selected_format,
                 'merge_output_format': 'mp4',
 
                 'noplaylist': True,
@@ -106,28 +186,40 @@ async def download(url: str, download_type: str = "video"):
 
                 video_id = info.get('id')
 
+                # FIND FILE (ONLY CURRENT REQUEST)
                 possible_files = [
-                    f for f in DOWNLOAD_DIR.glob(f"*{video_id}*")
+                    f for f in DOWNLOAD_DIR.glob(f"*{unique_id}_{video_id}*")
                     if f.suffix.lower() in ['.mp4', '.mkv', '.webm', '.mp3', '.m4a']
                 ]
-                
+
                 if not possible_files:
                     raise Exception("Downloaded file not found")
 
+                # PICK LATEST FILE (SAFE)
                 possible_files = sorted(
                     possible_files,
-                    key=lambda x: x.suffix != '.mp4'
+                    key=lambda x: x.stat().st_mtime,
+                    reverse=True
                 )
 
+                file_path = possible_files[0]
+
+                logger.info(f"Final file selected: {file_path}")
+
+                if file_path.suffix.lower() in ['.htm', '.html']:
+                    logger.error(f"Invalid file detected: {file_path}")
+                    file_path.unlink(missing_ok=True)
+                    raise Exception("Invalid file (HTML instead of video)")
+
+                # METADATA
                 title = info.get('title', 'Unknown')
                 description = info.get('description', '') or ""
                 official_tags = info.get('tags') or []
 
-                # get all hashtags source
+                # hashtags
                 title_hashtags = re.findall(r'#([^\s#]+)', title)
                 desc_hashtags = re.findall(r'#([^\s#]+)', description)
 
-                # combained all
                 all_sources = title_hashtags + official_tags + desc_hashtags
 
                 seen = set()
@@ -142,20 +234,13 @@ async def download(url: str, download_type: str = "video"):
                 # caption
                 lines = [line.strip() for line in description.split('\n') if line.strip()]
                 clean_lines = [l for l in lines if not l.startswith(('#', 'http'))]
+
                 short_caption = " ".join(clean_lines[:3])
                 if len(clean_lines) > 3:
                     short_caption += "..."
 
                 # file size
-                file_path = possible_files[0]
                 actual_size = file_path.stat().st_size
-
-                logger.info(f"Final file selected: {file_path}")
-
-                if file_path.suffix.lower() in ['.htm', '.html']:
-                    logger.error(f"Invalid file detected: {file_path}")
-                    os.remove(file_path)
-                    raise Exception("Invalid file (HTML instead of video)")
 
                 return {
                     'title': title,
