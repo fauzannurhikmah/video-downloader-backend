@@ -57,22 +57,24 @@ async def get_available_qualities(url: str):
             'quiet': True,
             'no_warnings': True,
             'cookiefile': str(COOKIES_PATH) if COOKIES_PATH.exists() else None,
-            
-            # Metadata Only
-            'extract_flat': False,
+
+            # 🔥 WAJIB
             'skip_download': True,
-            
-            # Bypass Geo/IP Block via Client Diversity
+
+            # 🔥 HAPUS android & tv
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android', 'web', 'tv'],
-                    'player_skip': ['webpage', 'configs'],
+                    'player_client': ['web'],  # ONLY WEB
                 }
             },
 
+            'sleep_interval': 1,
+            'max_sleep_interval': 3,
+
+            # 🔥 HAPUS player_skip (INI PENYEBAB BESAR)
+            
             'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': '*/*',
+                'User-Agent': 'Mozilla/5.0',
                 'Accept-Language': 'en-US,en;q=0.9',
             },
         }
@@ -211,7 +213,7 @@ async def get_available_qualities(url: str):
         return result
 
     return await asyncio.to_thread(_get)
-    
+
 
 # DOWNLOAD VIDEO / AUDIO
 async def download(url: str, download_type: str = "video", quality: int | None = None):
