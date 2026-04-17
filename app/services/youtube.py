@@ -54,46 +54,39 @@ async def get_available_qualities(url: str):
         ydl_opts = {
             'quiet': True,
             'cookiefile': str(COOKIES_PATH) if COOKIES_PATH.exists() else None,
+
+            # 🔥 FIX UTAMA: paksa DASH, bukan m3u8
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['web', 'android']
+                }
+            },
+
+            # optional biar lebih stabil
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0',
+                'Accept-Language': 'en-US,en;q=0.9',
+            }
         }
 
         print("\n========== DEBUG START ==========")
-        print(f"URL: {url}")
-        print(f"Cookies exists: {COOKIES_PATH.exists()}")
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
 
-            print(f"INFO KEYS: {list(info.keys())}")
-
-            formats = info.get("formats", [])
+            formats = info.get("formats") or []
             duration = info.get("duration") or 0
 
             print(f"TOTAL FORMATS: {len(formats)}")
             print(f"DURATION: {duration}")
 
             # =========================
-            # SAMPLE FORMATS (biar gak spam)
-            # =========================
-            print("\n--- SAMPLE FORMATS ---")
-            for i, f in enumerate(formats[:10]):
-                print({
-                    "height": f.get("height"),
-                    "vcodec": f.get("vcodec"),
-                    "acodec": f.get("acodec"),
-                    "filesize": f.get("filesize"),
-                    "tbr": f.get("tbr"),
-                    "ext": f.get("ext"),
-                })
-
-            # =========================
-            # AUDIO
+            # AUDIO (best)
             # =========================
             audio_streams = [
                 f for f in formats
                 if f.get("vcodec") == "none" and f.get("acodec") != "none"
             ]
-
-            print(f"\nAUDIO STREAMS COUNT: {len(audio_streams)}")
 
             best_audio = None
             if audio_streams:
@@ -102,56 +95,69 @@ async def get_available_qualities(url: str):
             audio_size = 0
             if best_audio:
                 audio_size = best_audio.get('filesize') or best_audio.get('filesize_approx')
-                if not audio_size and best_audio.get('tbr'):
+
+                if not audio_size and best_audio.get('tbr') and duration:
                     audio_size = (best_audio['tbr'] * 1000 / 8) * duration
 
-            print(f"BEST AUDIO SIZE: {audio_size}")
+            print(f"AUDIO SIZE: {audio_size}")
 
+            # =========================
+            # VIDEO
+            # =========================
             result_map = {}
-
-            skipped_no_height = 0
-            skipped_audio_only = 0
-            skipped_no_size = 0
-            success_count = 0
 
             for f in formats:
                 height = f.get("height")
 
+                # skip yang gak ada resolusi
                 if not height:
-                    skipped_no_height += 1
                     continue
 
+                # skip audio only
                 if f.get("vcodec") == "none":
-                    skipped_audio_only += 1
                     continue
 
                 v_size = f.get("filesize") or f.get("filesize_approx")
 
-                if not v_size and f.get("tbr"):
+                # fallback bitrate
+                if not v_size and f.get("tbr") and duration:
                     v_size = (f['tbr'] * 1000 / 8) * duration
 
+                # 🔥 fallback kasar biar gak kosong
+                if not v_size and duration:
+                    fallback_bitrate = {
+                        144: 100,
+                        240: 200,
+                        360: 400,
+                        480: 800,
+                        720: 1500,
+                        1080: 3000,
+                    }.get(height, 1000)
+
+                    v_size = (fallback_bitrate * 1000 / 8) * duration
+
                 if not v_size:
-                    skipped_no_size += 1
                     continue
 
-                total_estimated_size = v_size + audio_size
+                total_size = v_size + audio_size
 
-                result_map.setdefault(height, []).append(total_estimated_size)
-                success_count += 1
+                result_map.setdefault(height, []).append(total_size)
 
-            print("\n--- FILTER STATS ---")
-            print(f"Skipped (no height): {skipped_no_height}")
-            print(f"Skipped (audio only): {skipped_audio_only}")
-            print(f"Skipped (no size): {skipped_no_size}")
-            print(f"Valid formats: {success_count}")
+            print(f"RESULT MAP KEYS: {list(result_map.keys())}")
 
-            print(f"\nRESULT MAP KEYS: {list(result_map.keys())}")
-
+            # =========================
+            # FALLBACK (ANTI EMPTY)
+            # =========================
             if not result_map:
-                print("⚠️ RESULT MAP EMPTY ⚠️")
-                print("========== DEBUG END ==========\n")
-                return []
+                print("⚠️ FALLBACK TRIGGERED")
+                return [
+                    {"quality": 360, "label": "360p (fallback)", "filesize": None},
+                    {"quality": 720, "label": "720p (fallback)", "filesize": None},
+                ]
 
+            # =========================
+            # BUILD RESULT
+            # =========================
             qualities_keys = sorted(result_map.keys())
             qualities_keys = [q for q in qualities_keys if q <= 1080]
 
@@ -160,6 +166,8 @@ async def get_available_qualities(url: str):
 
             for q in qualities_keys:
                 sizes = sorted(result_map[q])
+
+                # ambil yang paling mendekati real (yt-dlp biasanya pilih high bitrate)
                 chosen = sizes[-1]
 
                 label = f"{q}p"
