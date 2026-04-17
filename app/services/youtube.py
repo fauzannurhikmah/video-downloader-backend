@@ -51,168 +51,80 @@ async def get_info(url: str):
 # GET QUALITIES
 async def get_available_qualities(url: str):
     def _get():
-        import time
 
         ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'cookiefile': str(COOKIES_PATH) if COOKIES_PATH.exists() else None,
-
-            # 🔥 WAJIB
+            "quiet": True,
+            "cookiefile": str(COOKIES_PATH) if COOKIES_PATH.exists() else None,
             'skip_download': True,
-
-            # 🔥 HAPUS android & tv
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['web'],  # ONLY WEB
-                }
-            },
-
-            'sleep_interval': 1,
-            'max_sleep_interval': 3,
-
-            # 🔥 HAPUS player_skip (INI PENYEBAB BESAR)
-            
             'http_headers': {
                 'User-Agent': 'Mozilla/5.0',
                 'Accept-Language': 'en-US,en;q=0.9',
             },
         }
 
-        print("\n========== DEBUG START ==========")
-
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-
-        except Exception as e:
-            print(f"❌ ERROR EXTRACT: {e}")
-            return []
-
-        formats = info.get("formats") or []
-        duration = info.get("duration") or 0
-
-        print(f"TOTAL FORMATS: {len(formats)}")
-        print(f"DURATION: {duration}")
-
-        # =========================
-        # AUDIO (best)
-        # =========================
-        audio_size = 0
-
-        audio_streams = [
-            f for f in formats
-            if f.get("vcodec") == "none" and f.get("acodec") != "none"
-        ]
-
-        print(f"AUDIO STREAMS: {len(audio_streams)}")
-
-        if audio_streams:
-            best_audio = max(audio_streams, key=lambda x: x.get('tbr') or 0)
-
-            audio_size = best_audio.get('filesize') or best_audio.get('filesize_approx')
-
-            if not audio_size and best_audio.get('tbr') and duration:
-                audio_size = (best_audio['tbr'] * 1000 / 8) * duration
-
-        print(f"AUDIO SIZE: {audio_size}")
-
-        # =========================
-        # VIDEO
-        # =========================
-        result_map = {}
-
-        skipped = 0
-        success = 0
-
-        for f in formats:
-            height = f.get("height")
-
-            if not height:
-                skipped += 1
-                continue
-
-            if f.get("vcodec") == "none":
-                skipped += 1
-                continue
-
-            v_size = f.get("filesize") or f.get("filesize_approx")
-
-            if not v_size and f.get("tbr") and duration:
-                v_size = (f['tbr'] * 1000 / 8) * duration
-
-            # 🔥 fallback biar gak kosong
-            if not v_size and duration:
-                fallback_bitrate = {
-                    144: 100,
-                    240: 200,
-                    360: 400,
-                    480: 800,
-                    720: 1500,
-                    1080: 3000,
-                }.get(height, 1000)
-
-                v_size = (fallback_bitrate * 1000 / 8) * duration
-
-            if not v_size:
-                skipped += 1
-                continue
-
-            total_size = v_size + audio_size
-
-            result_map.setdefault(height, []).append(total_size)
-            success += 1
-
-        print(f"VALID FORMATS: {success}")
-        print(f"SKIPPED: {skipped}")
-        print(f"RESULT MAP: {list(result_map.keys())}")
-
-        # =========================
-        # FALLBACK kalau kosong (HLS case)
-        # =========================
-        if not result_map:
-            print("⚠️ FALLBACK (HLS / BLOCKED)")
-
-            return [
-                {"quality": 360, "label": "360p (fallback)", "filesize": None},
-                {"quality": 720, "label": "720p (fallback)", "filesize": None},
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            formats = info.get("formats", [])
+            duration = info.get("duration") or 0
+            best_audio = None
+            audio_streams = [
+                f
+                for f in formats
+                if f.get("vcodec") == "none" and f.get("acodec") != "none"
             ]
+            if audio_streams:
+                best_audio = max(audio_streams, key=lambda x: x.get("tbr") or 0)
 
-        # =========================
-        # BUILD RESULT
-        # =========================
-        qualities_keys = sorted(result_map.keys())
-        qualities_keys = [q for q in qualities_keys if q <= 1080]
+            audio_size = 0
+            if best_audio:
+                audio_size = best_audio.get("filesize") or best_audio.get(
+                    "filesize_approx"
+                )
+                if not audio_size and best_audio.get("tbr"):
+                    audio_size = (best_audio["tbr"] * 1000 / 8) * duration
 
-        result = []
-        max_q = max(qualities_keys)
+            result_map = {}
+            for f in formats:
+                if f.get("vcodec") == "none" or not f.get("height"):
+                    continue
 
-        for q in qualities_keys:
-            sizes = sorted(result_map[q])
+                height = f["height"]
+                v_size = f.get("filesize") or f.get("filesize_approx")
+                if not v_size and f.get("tbr"):
+                    v_size = (f["tbr"] * 1000 / 8) * duration
+                if not v_size:
+                    continue
+                total_estimated_size = v_size + audio_size
+                if height not in result_map:
+                    result_map[height] = []
+                result_map[height].append(total_estimated_size)
+            qualities_keys = sorted(result_map.keys())
+            qualities_keys = [q for q in qualities_keys if q <= 1080]
+            result = []
+            max_q = max(qualities_keys) if qualities_keys else 0
+            for q in qualities_keys:
+                sizes = sorted(result_map[q])
+                chosen = sizes[-1]
+                label = f"{q}p"
+                if q == 360:
+                    label += " (fast)"
+                elif q == 720:
+                    label += " (recommended)"
+                elif q == max_q:
+                    label += " (best)"
+                result.append(
+                    {
+                        "quality": q,
+                        "label": label,
+                        "filesize": f"~{format_size(chosen)}",
+                        "bytes": int(chosen),
+                    }
+                )
 
-            # ambil terbesar (mendekati real yt-dlp choice)
-            chosen = sizes[-1]
-
-            label = f"{q}p"
-            if q == 360:
-                label += " (fast)"
-            elif q == 720:
-                label += " (recommended)"
-            elif q == max_q:
-                label += " (best)"
-
-            result.append({
-                "quality": q,
-                "label": label,
-                "filesize": f"~{format_size(chosen)}",
-                "bytes": int(chosen),
-            })
-
-        print("========== DEBUG END ==========\n")
-
-        return result
+            return result
 
     return await asyncio.to_thread(_get)
+
 
 
 # DOWNLOAD VIDEO / AUDIO
