@@ -57,22 +57,22 @@ async def get_available_qualities(url: str):
             'quiet': True,
             'cookiefile': str(COOKIES_PATH) if COOKIES_PATH.exists() else None,
 
-            # 🔥 FIX: pakai web client (android bikin error di server)
+            'skip_download': True,
+            'allow_unplayable_formats': True,
+
             'extractor_args': {
                 'youtube': {
                     'player_client': ['web'],
                 }
             },
 
-            # 🔥 Anti 429 (rate limit)
-            'sleep_interval': 2,
-            'max_sleep_interval': 5,
-
-            # mimic browser
             'http_headers': {
                 'User-Agent': 'Mozilla/5.0',
                 'Accept-Language': 'en-US,en;q=0.9',
-            }
+            },
+
+            'sleep_interval': 2,
+            'max_sleep_interval': 5,
         }
 
         print("\n========== DEBUG START ==========")
