@@ -129,6 +129,28 @@ async def get_available_qualities(url: str):
 
 # DOWNLOAD VIDEO / AUDIO
 async def download(url: str, download_type: str = "video", quality: int | None = None):
+    import socket
+    logger.info("=== YOUTUBE DOWNLOAD DEBUG START ===")
+    logger.info(f"URL: {url}")
+    logger.info(f"Download type: {download_type}")
+    logger.info(f"Quality: {quality}")
+
+    logger.info(f"COOKIES_PATH: {COOKIES_PATH}")
+    logger.info(f"COOKIES EXISTS: {COOKIES_PATH.exists()}")
+
+    try:
+        logger.info(f"COOKIES SIZE: {COOKIES_PATH.stat().st_size} bytes")
+    except Exception as e:
+        logger.warning(f"COOKIES SIZE ERROR: {e}")
+
+    logger.info(f"CURRENT WORKDIR: {os.getcwd()}")
+    logger.info(f"FILE LOCATION: {Path(__file__).resolve()}")
+
+    try:
+        logger.info(f"SERVER IP: {socket.gethostbyname(socket.gethostname())}")
+    except:
+        pass
+
     if not COOKIES_PATH.exists():
         logger.error("YouTube cookies have not been uploaded yet")
         raise Exception("Failed to load YouTube cookies")
@@ -144,6 +166,18 @@ async def download(url: str, download_type: str = "video", quality: int | None =
 
             if download_type == "video" and quality:
                 selected_format = f"best[height<={quality}]/bestvideo[height<={quality}]+bestaudio"
+
+            logger.info(f"Selected format: {selected_format}")
+
+            class YTDLPLogger:
+                def debug(self, msg):
+                    logger.info(f"[yt-dlp DEBUG] {msg}")
+
+                def warning(self, msg):
+                    logger.warning(f"[yt-dlp WARNING] {msg}")
+
+                def error(self, msg):
+                    logger.error(f"[yt-dlp ERROR] {msg}")
 
             ydl_opts = {
                 'quiet': False,
@@ -161,19 +195,21 @@ async def download(url: str, download_type: str = "video", quality: int | None =
                 'nocheckcertificate': True,
                 'ignoreerrors': False,
 
-                'js_runtimes': {
-                    'node': {}
-                },
+                'js_runtimes': ['node'],
                 'remote_components': ['ejs:github'],
 
                 'http_headers': {
-                    'User-Agent': 'Mozilla/5.0',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36',
                     'Accept-Language': 'en-US,en;q=0.9',
                 },
 
                 'socket_timeout': 30,
                 'retries': 5,
+
+                'logger': YTDLPLogger()
             }
+
+            logger.info(f"YDL OPTIONS: {ydl_opts}")
 
             # AUDIO MODE
             if download_type == "audio":
@@ -185,23 +221,34 @@ async def download(url: str, download_type: str = "video", quality: int | None =
                 }]
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
+                try:
+                    info = ydl.extract_info(url, download=True)
+                except Exception as e:
+                    logger.error("=== YT-DLP HARD ERROR ===")
+                    logger.error(str(e))
+                    raise
 
                 if not info:
                     raise Exception("Failed to extract video information")
 
+                logger.info(f"Extracted info keys: {list(info.keys())}")
+
                 video_id = info.get('id')
 
-                # FIND FILE (ONLY CURRENT REQUEST)
+                # FIND FILE
+                pattern = f"*{unique_id}_{video_id}*"
+                logger.info(f"Searching files with pattern: {pattern}")
+
                 possible_files = [
-                    f for f in DOWNLOAD_DIR.glob(f"*{unique_id}_{video_id}*")
+                    f for f in DOWNLOAD_DIR.glob(pattern)
                     if f.suffix.lower() in ['.mp4', '.mkv', '.webm', '.mp3', '.m4a']
                 ]
+
+                logger.info(f"Files found: {[str(f) for f in possible_files]}")
 
                 if not possible_files:
                     raise Exception("Downloaded file not found")
 
-                # PICK LATEST FILE (SAFE)
                 possible_files = sorted(
                     possible_files,
                     key=lambda x: x.stat().st_mtime,
@@ -213,7 +260,7 @@ async def download(url: str, download_type: str = "video", quality: int | None =
                 logger.info(f"Final file selected: {file_path}")
 
                 if file_path.suffix.lower() in ['.htm', '.html']:
-                    logger.error(f"Invalid file detected: {file_path}")
+                    logger.error(f"Invalid file detected (HTML): {file_path}")
                     file_path.unlink(missing_ok=True)
                     raise Exception("Invalid file (HTML instead of video)")
 
@@ -222,7 +269,8 @@ async def download(url: str, download_type: str = "video", quality: int | None =
                 description = info.get('description', '') or ""
                 official_tags = info.get('tags') or []
 
-                # hashtags
+                import re
+
                 title_hashtags = re.findall(r'#([^\s#]+)', title)
                 desc_hashtags = re.findall(r'#([^\s#]+)', description)
 
@@ -237,7 +285,6 @@ async def download(url: str, download_type: str = "video", quality: int | None =
                         seen.add(tag)
                         final_tags.append(tag)
 
-                # caption
                 lines = [line.strip() for line in description.split('\n') if line.strip()]
                 clean_lines = [l for l in lines if not l.startswith(('#', 'http'))]
 
@@ -245,8 +292,9 @@ async def download(url: str, download_type: str = "video", quality: int | None =
                 if len(clean_lines) > 3:
                     short_caption += "..."
 
-                # file size
                 actual_size = file_path.stat().st_size
+
+                logger.info("=== YOUTUBE DOWNLOAD SUCCESS ===")
 
                 return {
                     'title': title,
