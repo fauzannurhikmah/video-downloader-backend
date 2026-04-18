@@ -6,6 +6,7 @@ import logging
 import os
 import re
 from app.utils.format import format_size, format_smart_duration
+from app.utils.youtube_quality import get_fallback_qualities
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,10 @@ async def get_available_qualities(url: str):
             "quiet": True,
             "cookiefile": str(COOKIES_PATH) if COOKIES_PATH.exists() else None,
             'skip_download': True,
+            "js_runtimes": {
+                "node": {}
+            },
+            'remote_components': ['ejs:github'],
             'http_headers': {
                 'User-Agent': 'Mozilla/5.0',
                 'Accept-Language': 'en-US,en;q=0.9',
@@ -120,6 +125,9 @@ async def get_available_qualities(url: str):
                         "bytes": int(chosen),
                     }
                 )
+
+            if not result:
+                return get_fallback_qualities(url, info)
 
             return result
 
