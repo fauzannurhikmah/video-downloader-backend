@@ -195,7 +195,9 @@ async def download(url: str, download_type: str = "video", quality: int | None =
                 'nocheckcertificate': True,
                 'ignoreerrors': False,
 
-                'js_runtimes': ['node'],
+                'js_runtimes': {
+                    'node': {}
+                },
                 'remote_components': ['ejs:github'],
 
                 'http_headers': {
