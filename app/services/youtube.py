@@ -136,18 +136,6 @@ async def download(url: str, download_type: str = "video", quality: int | None =
     def _download():
         try:
             import uuid
-            import shutil
-            import platform
-
-            node_path = shutil.which("node")
-
-            if not node_path:
-                if platform.system() == "Linux":
-                    node_path = "/usr/bin/node"
-                else:
-                    node_path = "node" 
-
-            logger.info(f"Using JS Runtime: {node_path}")
 
             logger.info(f"Downloading: {url}")
 
@@ -162,8 +150,6 @@ async def download(url: str, download_type: str = "video", quality: int | None =
                 'no_warnings': False,
 
                 'cookiefile': str(COOKIES_PATH),
-
-                'javascript_executable': node_path,
 
                 'outtmpl': str(DOWNLOAD_DIR / f'%(title).70s_{unique_id}_%(id)s.%(ext)s'),
                 'restrictfilenames': True,
@@ -187,13 +173,6 @@ async def download(url: str, download_type: str = "video", quality: int | None =
 
                 'socket_timeout': 30,
                 'retries': 5,
-
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['android', 'web', 'tv'],
-                        'n_exploit': ['manifest', 'javascript'],
-                    }
-                },
             }
 
             # AUDIO MODE
